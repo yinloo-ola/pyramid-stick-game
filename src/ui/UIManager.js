@@ -2,7 +2,7 @@ import { Player, GameStatus } from '../state/types.js';
 
 export class UIManager {
   constructor(handlers) {
-    this.handlers = handlers; // { onConfirm, onReset, onToggleMute, onClearSelection, onSaveNames, onOpenMultiplayer, onJoinMultiplayer, onLeaveMultiplayer }
+    this.handlers = handlers; // { onConfirm, onReset, onToggleMute, onClearSelection, onSaveNames, onSaveMyName, onOpponentCardClick, onOpenMultiplayer, onJoinMultiplayer, onLeaveMultiplayer }
     this.statusBanner = document.getElementById('status-banner');
     this.statusSubtext = document.getElementById('status-subtext');
     this.player1Card = document.getElementById('p1-card');
@@ -11,6 +11,8 @@ export class UIManager {
     this.p2NameDisplay = document.getElementById('p2-name-display');
     this.p1AvatarBadge = document.getElementById('p1-avatar-badge');
     this.p2AvatarBadge = document.getElementById('p2-avatar-badge');
+    this.p1Tag = document.querySelector('#p1-card .player-tag');
+    this.p2Tag = document.querySelector('#p2-card .player-tag');
 
     this.btnConfirm = document.getElementById('btn-confirm');
     this.btnClear = document.getElementById('btn-clear');
@@ -40,17 +42,21 @@ export class UIManager {
     this.joinForm = document.getElementById('join-form');
     this.inputJoinCode = document.getElementById('input-join-code');
 
-    // Other Modals
-    this.rulesModal = document.getElementById('rules-modal');
-    this.btnCloseRules = document.getElementById('btn-close-rules');
+    // Names Modal Elements
     this.namesModal = document.getElementById('names-modal');
+    this.namesModalTitle = document.querySelector('#names-modal .modal-header h3');
     this.btnCloseNames = document.getElementById('btn-close-names');
     this.namesForm = document.getElementById('names-form');
+    this.p1Section = document.querySelector('.p1-section');
+    this.p2Section = document.querySelector('.p2-section');
     this.inputP1Name = document.getElementById('input-p1-name');
     this.inputP2Name = document.getElementById('input-p2-name');
     this.p1AvatarPicker = document.getElementById('p1-avatar-picker');
     this.p2AvatarPicker = document.getElementById('p2-avatar-picker');
 
+    // Rules & Game Over Modals
+    this.rulesModal = document.getElementById('rules-modal');
+    this.btnCloseRules = document.getElementById('btn-close-rules');
     this.gameOverModal = document.getElementById('game-over-modal');
     this.winnerTitle = document.getElementById('winner-title');
     this.winnerSubtitle = document.getElementById('winner-subtitle');
@@ -60,6 +66,7 @@ export class UIManager {
     this.selectedP2Avatar = '🐼';
     this.currentShareUrl = '';
     this.latestSnapshot = null;
+    this.currentContext = { gameMode: 'LOCAL', myPlayerRole: null };
 
     this.bindEvents();
     this.setupAvatarPickers();
@@ -103,7 +110,6 @@ export class UIManager {
 
   async openMultiplayerModal() {
     this.multiplayerModal.classList.add('visible');
-    // Default to host tab and trigger creation
     this.mpTabHost.click();
     this.hostRoomCode.textContent = '----';
     this.hostWaitingStatus.innerHTML = '<span class="spinner-dot"></span> Generating room code...';
@@ -145,22 +151,54 @@ export class UIManager {
   }
 
   openNamesModal() {
-    if (this.latestSnapshot) {
+    if (!this.latestSnapshot) return;
+
+    const isOnline = this.currentContext?.gameMode === 'ONLINE';
+    const myRole = this.currentContext?.myPlayerRole;
+
+    if (isOnline) {
+      if (myRole === Player.PLAYER_1) {
+        // Only show Player 1 section
+        this.p1Section.style.display = 'flex';
+        this.p2Section.style.display = 'none';
+        this.namesModalTitle.textContent = '✏️ Change Your Profile (Player 1)';
+        this.inputP1Name.value = this.latestSnapshot.player_names[Player.PLAYER_1] || 'Player 1';
+        this.selectedP1Avatar = this.latestSnapshot.player_avatars[Player.PLAYER_1] || '🦊';
+        this.p1AvatarPicker.querySelectorAll('.avatar-option').forEach((btn) => {
+          btn.classList.toggle('selected', btn.dataset.avatar === this.selectedP1Avatar);
+        });
+        setTimeout(() => this.inputP1Name.focus(), 100);
+      } else if (myRole === Player.PLAYER_2) {
+        // Only show Player 2 section
+        this.p1Section.style.display = 'none';
+        this.p2Section.style.display = 'flex';
+        this.namesModalTitle.textContent = '✏️ Change Your Profile (Player 2)';
+        this.inputP2Name.value = this.latestSnapshot.player_names[Player.PLAYER_2] || 'Player 2';
+        this.selectedP2Avatar = this.latestSnapshot.player_avatars[Player.PLAYER_2] || '🐼';
+        this.p2AvatarPicker.querySelectorAll('.avatar-option').forEach((btn) => {
+          btn.classList.toggle('selected', btn.dataset.avatar === this.selectedP2Avatar);
+        });
+        setTimeout(() => this.inputP2Name.focus(), 100);
+      }
+    } else {
+      // Local Pass & Play: Show both
+      this.p1Section.style.display = 'flex';
+      this.p2Section.style.display = 'flex';
+      this.namesModalTitle.textContent = '👥 Enter Player Names';
       this.inputP1Name.value = this.latestSnapshot.player_names[Player.PLAYER_1] || 'Player 1';
       this.inputP2Name.value = this.latestSnapshot.player_names[Player.PLAYER_2] || 'Player 2';
       this.selectedP1Avatar = this.latestSnapshot.player_avatars[Player.PLAYER_1] || '🦊';
       this.selectedP2Avatar = this.latestSnapshot.player_avatars[Player.PLAYER_2] || '🐼';
-
-      // Update selected avatar buttons
       this.p1AvatarPicker.querySelectorAll('.avatar-option').forEach((btn) => {
         btn.classList.toggle('selected', btn.dataset.avatar === this.selectedP1Avatar);
       });
       this.p2AvatarPicker.querySelectorAll('.avatar-option').forEach((btn) => {
         btn.classList.toggle('selected', btn.dataset.avatar === this.selectedP2Avatar);
       });
+      setTimeout(() => this.inputP1Name.focus(), 100);
     }
+
     this.namesModal.classList.add('visible');
-    setTimeout(() => this.inputP1Name.focus(), 100);
   }
 
   closeNamesModal() {
@@ -239,8 +277,26 @@ export class UIManager {
 
     // Open Names Modal
     this.btnNames.addEventListener('click', () => this.openNamesModal());
-    this.player1Card.addEventListener('click', () => this.openNamesModal());
-    this.player2Card.addEventListener('click', () => this.openNamesModal());
+
+    this.player1Card.addEventListener('click', () => {
+      const isOnline = this.currentContext?.gameMode === 'ONLINE';
+      const myRole = this.currentContext?.myPlayerRole;
+      if (isOnline && myRole !== Player.PLAYER_1) {
+        this.handlers.onOpponentCardClick?.(Player.PLAYER_1);
+        return;
+      }
+      this.openNamesModal();
+    });
+
+    this.player2Card.addEventListener('click', () => {
+      const isOnline = this.currentContext?.gameMode === 'ONLINE';
+      const myRole = this.currentContext?.myPlayerRole;
+      if (isOnline && myRole !== Player.PLAYER_2) {
+        this.handlers.onOpponentCardClick?.(Player.PLAYER_2);
+        return;
+      }
+      this.openNamesModal();
+    });
 
     this.btnCloseNames.addEventListener('click', () => this.closeNamesModal());
     this.namesModal.addEventListener('click', (e) => {
@@ -251,9 +307,23 @@ export class UIManager {
 
     this.namesForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const p1Name = this.inputP1Name.value.trim() || 'Player 1';
-      const p2Name = this.inputP2Name.value.trim() || 'Player 2';
-      this.handlers.onSaveNames?.(p1Name, this.selectedP1Avatar, p2Name, this.selectedP2Avatar);
+      const isOnline = this.currentContext?.gameMode === 'ONLINE';
+      const myRole = this.currentContext?.myPlayerRole;
+
+      if (isOnline) {
+        if (myRole === Player.PLAYER_1) {
+          const name = this.inputP1Name.value.trim() || 'Player 1';
+          this.handlers.onSaveMyName?.(Player.PLAYER_1, name, this.selectedP1Avatar);
+        } else if (myRole === Player.PLAYER_2) {
+          const name = this.inputP2Name.value.trim() || 'Player 2';
+          this.handlers.onSaveMyName?.(Player.PLAYER_2, name, this.selectedP2Avatar);
+        }
+      } else {
+        const p1Name = this.inputP1Name.value.trim() || 'Player 1';
+        const p2Name = this.inputP2Name.value.trim() || 'Player 2';
+        this.handlers.onSaveNames?.(p1Name, this.selectedP1Avatar, p2Name, this.selectedP2Avatar);
+      }
+
       this.closeNamesModal();
     });
 
@@ -270,6 +340,8 @@ export class UIManager {
 
   render(snapshot, context = {}) {
     this.latestSnapshot = snapshot;
+    this.currentContext = context;
+
     const {
       current_turn,
       game_status,
@@ -296,6 +368,20 @@ export class UIManager {
     this.p2NameDisplay.textContent = p2Name;
     this.p1AvatarBadge.textContent = p1Avatar;
     this.p2AvatarBadge.textContent = p2Avatar;
+
+    // Subtitle tags indicating who can be edited
+    if (isOnline) {
+      if (myPlayerRole === Player.PLAYER_1) {
+        if (this.p1Tag) this.p1Tag.textContent = '(You) Tap to edit ✏️';
+        if (this.p2Tag) this.p2Tag.textContent = '(Friend) 👤';
+      } else if (myPlayerRole === Player.PLAYER_2) {
+        if (this.p1Tag) this.p1Tag.textContent = '(Friend) 👤';
+        if (this.p2Tag) this.p2Tag.textContent = '(You) Tap to edit ✏️';
+      }
+    } else {
+      if (this.p1Tag) this.p1Tag.textContent = 'Tap to rename ✏️';
+      if (this.p2Tag) this.p2Tag.textContent = 'Tap to rename ✏️';
+    }
 
     const isP1 = current_turn === Player.PLAYER_1;
     this.player1Card.classList.toggle('active-turn', isP1 && game_status === GameStatus.PLAYING);

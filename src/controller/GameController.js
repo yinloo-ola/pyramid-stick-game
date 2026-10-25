@@ -51,19 +51,19 @@ export class GameController {
       this.audio.playWin();
 
       if (role === 'HOST') {
-        const snap = this.state.getSnapshot();
+        // Send initial handshake with fresh Host's name & avatar
         this.peerService.send({
-          type: 'INITIAL_SYNC',
-          snapshot: snap,
+          type: 'ROOM_INIT',
+          hostName: this.state.player_names[Player.PLAYER_1],
+          hostAvatar: this.state.player_avatars[Player.PLAYER_1],
         });
         this.toast.show('🎉 Friend joined your game! Ready to play!', 'info', 2500);
       } else {
-        const p2Name = this.state.player_names[Player.PLAYER_2] || 'Player 2';
-        const p2Avatar = this.state.player_avatars[Player.PLAYER_2] || '🐼';
+        // Guest introduces themselves with fresh Guest's name & avatar
         this.peerService.send({
-          type: 'GUEST_HELLO',
-          name: p2Name,
-          avatar: p2Avatar,
+          type: 'GUEST_JOINED',
+          guestName: this.state.player_names[Player.PLAYER_2],
+          guestAvatar: this.state.player_avatars[Player.PLAYER_2],
         });
         this.toast.show('🎉 Connected to friend! You are Player 2!', 'info', 2500);
       }
@@ -103,6 +103,8 @@ export class GameController {
   async handleCreateRoom() {
     try {
       this.toast.show('Creating 2-player room... ⏳', 'info', 2000);
+      // Reset names and board for a clean 2-phone multiplayer game
+      this.state.resetForMultiplayer();
       const res = await this.peerService.createRoom();
       return res;
     } catch (err) {
@@ -118,6 +120,8 @@ export class GameController {
     }
     try {
       this.toast.show(`Connecting to room ${code}... ⏳`, 'info', 2500);
+      // Reset names and board for a clean 2-phone multiplayer game
+      this.state.resetForMultiplayer();
       await this.peerService.joinRoom(code.trim());
     } catch (err) {
       this.toast.show('Failed to connect to room. Check code!', 'warning');
@@ -140,33 +144,34 @@ export class GameController {
     if (!msg || !msg.type) return;
 
     switch (msg.type) {
-      case 'INITIAL_SYNC':
-        if (msg.snapshot) {
-          this.state.board_state = [...msg.snapshot.board_state];
-          this.state.current_turn = msg.snapshot.current_turn;
-          this.state.game_status = msg.snapshot.game_status;
-          this.state.winner = msg.snapshot.winner;
-          this.state.loser = msg.snapshot.loser;
-          this.state.selected_sticks = [...msg.snapshot.selected_sticks];
-          this.state.selected_row = msg.snapshot.selected_row;
-          this.state.player_names = { ...msg.snapshot.player_names };
-          this.state.player_avatars = { ...msg.snapshot.player_avatars };
+      case 'ROOM_INIT':
+        // Guest receives Host's initialization
+        this.state.reset();
+        if (msg.hostName && msg.hostAvatar) {
+          this.state.setPlayerInfo(Player.PLAYER_1, msg.hostName, msg.hostAvatar, false);
+        }
+        // Guest replies with their name & avatar
+        this.peerService.send({
+          type: 'GUEST_JOINED',
+          guestName: this.state.player_names[Player.PLAYER_2],
+          guestAvatar: this.state.player_avatars[Player.PLAYER_2],
+        });
+        break;
 
-          // Sync stick meshes
-          msg.snapshot.sticks.forEach((s) => {
-            const localStick = this.state.getStick(s.id);
-            if (localStick) localStick.state = s.state;
-          });
-
-          this.state.notify();
-          this.scene.buildSticks(this.state.sticks);
+      case 'GUEST_JOINED':
+        // Host receives Guest's name & avatar
+        if (msg.guestName) {
+          this.state.setPlayerInfo(Player.PLAYER_2, msg.guestName, msg.guestAvatar, false);
+          this.toast.show(`👋 ${msg.guestAvatar} ${msg.guestName} joined!`, 'info', 2000);
         }
         break;
 
-      case 'GUEST_HELLO':
-        if (msg.name) {
-          this.state.setPlayerInfo(Player.PLAYER_2, msg.name, msg.avatar);
-          this.toast.show(`👋 ${msg.avatar} ${msg.name} is ready!`, 'info', 2000);
+      case 'NAME_CHANGED':
+        // Opponent changed their own name on their device!
+        if (msg.player && msg.name) {
+          this.state.setPlayerInfo(msg.player, msg.name, msg.avatar, false);
+          this.toast.show(`Friend updated profile to ${msg.avatar} ${msg.name}! 🌟`, 'info', 2000);
+          this.audio.playTap(0);
         }
         break;
 
@@ -221,10 +226,6 @@ export class GameController {
         this.state.reset();
         this.scene.buildSticks(this.state.sticks);
         this.toast.show('🔄 Friend started a New Game!', 'info', 1800);
-        break;
-
-      case 'UPDATE_NAMES':
-        this.state.setPlayerInfo(msg.player, msg.name, msg.avatar);
         break;
     }
   }
@@ -354,23 +355,40 @@ export class GameController {
     }
   }
 
+  // Local Pass & Play Name Update (both players)
   handleSaveNames(p1Name, p1Avatar, p2Name, p2Avatar) {
     this.state.setPlayerInfo(Player.PLAYER_1, p1Name, p1Avatar);
     this.state.setPlayerInfo(Player.PLAYER_2, p2Name, p2Avatar);
     this.audio.playTap(0);
+    this.toast.show(`Hi ${p1Avatar} ${p1Name} & ${p2Avatar} ${p2Name}! Let's play! 🎮`, 'info', 2200);
+  }
+
+  // 2-Phone Multiplayer: Player ONLY changes their own name & avatar
+  handleSaveMyName(playerRole, name, avatar) {
+    if (this.gameMode === 'ONLINE' && playerRole !== this.myPlayerRole) {
+      return;
+    }
+
+    this.state.setPlayerInfo(playerRole, name, avatar, true);
+    this.audio.playTap(0);
 
     if (this.gameMode === 'ONLINE') {
-      const myName = this.myPlayerRole === Player.PLAYER_1 ? p1Name : p2Name;
-      const myAvatar = this.myPlayerRole === Player.PLAYER_1 ? p1Avatar : p2Avatar;
+      // Transmit new name to opponent's phone immediately
       this.peerService.send({
-        type: 'UPDATE_NAMES',
-        player: this.myPlayerRole,
-        name: myName,
-        avatar: myAvatar,
+        type: 'NAME_CHANGED',
+        player: playerRole,
+        name,
+        avatar,
       });
     }
 
-    this.toast.show(`Hi ${p1Avatar} ${p1Name} & ${p2Avatar} ${p2Name}! Let's play! 🎮`, 'info', 2200);
+    this.toast.show('Your profile was updated! 🌟', 'info', 1800);
+  }
+
+  // Prevent editing opponent's card in 2-phone mode
+  handleOpponentCardClick(role) {
+    this.audio.playError();
+    this.toast.show("That's your friend's profile! 👤 Tap your own card to change your name.", 'warning', 2400);
   }
 
   handleResetGame() {

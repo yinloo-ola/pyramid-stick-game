@@ -206,4 +206,13 @@ test('Custom Player Names and Avatars update snapshot and persist across resets'
   snap = state.getSnapshot();
   assert.equal(snap.player_names[Player.PLAYER_1], 'Leo');
   assert.equal(snap.player_names[Player.PLAYER_2], 'Emma');
+
+  // Verify resetForMultiplayer resets names to fresh defaults for a 2-phone match
+  state.resetForMultiplayer();
+  snap = state.getSnapshot();
+  assert.equal(snap.player_names[Player.PLAYER_1], 'Player 1');
+  assert.equal(snap.player_names[Player.PLAYER_2], 'Player 2');
+  assert.equal(snap.player_avatars[Player.PLAYER_1], '🦊');
+  assert.equal(snap.player_avatars[Player.PLAYER_2], '🐼');
+  assert.deepEqual(snap.board_state, [1, 3, 5, 7]);
 });

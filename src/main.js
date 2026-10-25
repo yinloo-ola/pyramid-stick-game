@@ -22,6 +22,10 @@ window.addEventListener('DOMContentLoaded', () => {
     onClearSelection: () => controller?.handleClearSelection(),
     onSaveNames: (p1Name, p1Avatar, p2Name, p2Avatar) =>
       controller?.handleSaveNames(p1Name, p1Avatar, p2Name, p2Avatar),
+    onSaveMyName: (playerRole, name, avatar) =>
+      controller?.handleSaveMyName(playerRole, name, avatar),
+    onOpponentCardClick: (role) =>
+      controller?.handleOpponentCardClick(role),
     onOpenMultiplayer: () => controller?.handleCreateRoom(),
     onJoinMultiplayer: (code) => controller?.handleJoinRoom(code),
     onLeaveMultiplayer: () => controller?.disconnectMultiplayer(),

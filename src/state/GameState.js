@@ -15,20 +15,32 @@ export class GameState {
     this.reset();
   }
 
-  setPlayerInfo(player, name, avatar) {
+  setPlayerInfo(player, name, avatar, persist = true) {
     if (name && name.trim()) {
       this.player_names[player] = name.trim().slice(0, 14);
-      if (typeof localStorage !== 'undefined') {
+      if (persist && typeof localStorage !== 'undefined') {
         localStorage.setItem(`pyramid_${player.toLowerCase()}_name`, this.player_names[player]);
       }
     }
     if (avatar) {
       this.player_avatars[player] = avatar;
-      if (typeof localStorage !== 'undefined') {
+      if (persist && typeof localStorage !== 'undefined') {
         localStorage.setItem(`pyramid_${player.toLowerCase()}_avatar`, avatar);
       }
     }
     this.notify();
+  }
+
+  resetForMultiplayer() {
+    this.player_names = {
+      [Player.PLAYER_1]: 'Player 1',
+      [Player.PLAYER_2]: 'Player 2',
+    };
+    this.player_avatars = {
+      [Player.PLAYER_1]: '🦊',
+      [Player.PLAYER_2]: '🐼',
+    };
+    this.reset();
   }
 
   reset() {
