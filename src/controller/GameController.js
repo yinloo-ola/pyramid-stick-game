@@ -15,7 +15,7 @@ export class GameController {
     // Subscribe UI and 3D scene to state updates
     this.state.subscribe((snapshot) => {
       this.ui.render(snapshot);
-      this.scene.updateSticks(snapshot.sticks);
+      this.scene.updateSticks(snapshot.sticks, snapshot.selected_row);
     });
 
     // Initialize 3D scene with sticks
@@ -35,14 +35,22 @@ export class GameController {
       const check = this.state.canSelectStick(stickId);
       if (!check.valid) {
         this.audio.playError();
-        this.toast.show(check.reason, 'warning');
+        if (check.type === 'ROW_RESTRICTION') {
+          this.toast.show('⚠️ Pick from the same row! ➡️', 'warning');
+        } else if (check.type === 'MAX_LIMIT') {
+          this.toast.show('🖐️ You can only take 1 to 3 sticks!', 'warning');
+        } else {
+          this.toast.show(check.reason, 'warning');
+        }
         return;
       }
+
+      this.scene.triggerStickBounce(stickId);
 
       const res = this.state.toggleStick(stickId);
       if (res.success) {
         if (res.action === 'SELECTED') {
-          this.audio.playTap();
+          this.audio.playTap(stick.row);
         } else if (res.action === 'DESELECTED') {
           this.audio.playDeselect();
         }
@@ -66,7 +74,7 @@ export class GameController {
 
     try {
       if (this.state.selected_sticks.length === 0) {
-        this.toast.show('Select at least 1 stick to confirm your move.', 'info');
+        this.toast.show('👆 Tap 1, 2, or 3 sticks first!', 'info');
         return;
       }
 
@@ -99,7 +107,7 @@ export class GameController {
     this.audio.playReset();
     this.state.reset();
     this.scene.buildSticks(this.state.sticks);
-    this.toast.show('Game reset! Player 1 begins.', 'info', 1800);
+    this.toast.show('🔄 New Game! 🦊 Player 1 starts!', 'info', 1800);
   }
 
   handleToggleMute() {

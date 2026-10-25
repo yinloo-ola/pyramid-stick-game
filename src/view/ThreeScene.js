@@ -143,13 +143,25 @@ export class ThreeScene {
     });
   }
 
-  updateSticks(sticksData) {
+  updateSticks(sticksData, selectedRow = null) {
     sticksData.forEach((data) => {
       const stickMesh = this.stickMeshes.get(data.id);
       if (stickMesh) {
+        if (selectedRow !== null && data.state === 'ACTIVE') {
+          stickMesh.setDimmed(data.row !== selectedRow);
+        } else {
+          stickMesh.setDimmed(false);
+        }
         stickMesh.updateVisualState(data.state, true);
       }
     });
+  }
+
+  triggerStickBounce(stickId) {
+    const stickMesh = this.stickMeshes.get(stickId);
+    if (stickMesh) {
+      stickMesh.triggerTapBounce();
+    }
   }
 
   triggerStrikeEffects(confirmedStickIds) {

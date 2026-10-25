@@ -12,8 +12,12 @@ export class StickMesh {
     this.currentState = stickData.state;
     this.targetZ = 0;
     this.targetScaleY = 1;
+    this.targetScaleXZ = 1;
     this.targetRotZ = 0;
+    this.targetOffsetY = 0;
+    this.bounceTimer = 0;
     this.isHovered = false;
+    this.isDimmed = false;
 
     this.createMaterials();
     this.createMeshes();
@@ -22,35 +26,42 @@ export class StickMesh {
 
   createMaterials() {
     this.materials = {
-      // Uncrossed / Active: Solid Charcoal body with subtle metallic sheen
+      // Warm, tactile wooden stick body - inviting & friendly for kids
       active: new THREE.MeshStandardMaterial({
-        color: COLORS.ACTIVE,
+        color: 0x2C3E50, // Dark charcoal as per PRD spec
         roughness: 0.25,
+        metalness: 0.15,
+      }),
+      activeHover: new THREE.MeshStandardMaterial({
+        color: 0x3d5a77,
+        roughness: 0.2,
         metalness: 0.2,
       }),
-      // Active Hover state
-      activeHover: new THREE.MeshStandardMaterial({
-        color: 0x415b76,
-        roughness: 0.2,
-        metalness: 0.3,
+      // Dimmed when another row is being selected
+      dimmedRow: new THREE.MeshStandardMaterial({
+        color: 0x1d2935,
+        roughness: 0.5,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.55,
       }),
-      // Match head tip: vibrant crimson/orange tip for authentic matchstick look
+      // Bright, friendly candy-red match head
       matchHead: new THREE.MeshStandardMaterial({
-        color: 0xe74c3c,
-        emissive: 0x801005,
-        emissiveIntensity: 0.35,
-        roughness: 0.3,
+        color: 0xff3b30,
+        emissive: 0x991008,
+        emissiveIntensity: 0.4,
+        roughness: 0.2,
         metalness: 0.1,
       }),
-      // Selected state (Current Turn): Bright Crimson with intense glow
+      // Selected state: vibrant glowing crimson
       selected: new THREE.MeshStandardMaterial({
         color: COLORS.SELECTED,
-        emissive: 0x99180c,
-        emissiveIntensity: 0.5,
+        emissive: 0xb71508,
+        emissiveIntensity: 0.6,
         roughness: 0.2,
         metalness: 0.1,
       }),
-      // Crossed Out / Disabled: Soft opacity drop (20%), Light Grey
+      // Crossed Out / Disabled: soft transparent grey
       disabled: new THREE.MeshStandardMaterial({
         color: COLORS.DISABLED,
         transparent: true,
@@ -59,32 +70,29 @@ export class StickMesh {
         metalness: 0.0,
         depthWrite: false,
       }),
-      // Bold Red Cross / Strike Slash for Crossed sticks
-      strikeSlash: new THREE.MeshStandardMaterial({
-        color: 0xe74c3c,
-        emissive: 0xff2a1b,
-        emissiveIntensity: 0.75,
-        roughness: 0.2,
-        metalness: 0.1,
-      }),
-      // Permanent Crossed-out 'X' material
+      // Bold cartoon comic-style red '✕' Cross Mark
       crossedMark: new THREE.MeshStandardMaterial({
-        color: 0xeb4d4b,
-        emissive: 0xb33939,
-        emissiveIntensity: 0.6,
-        roughness: 0.3,
+        color: 0xff3333,
+        emissive: 0xcc0000,
+        emissiveIntensity: 0.7,
+        roughness: 0.25,
         metalness: 0.1,
       }),
-      // Base pedestal socket
+      // Active base socket
       socketActive: new THREE.MeshBasicMaterial({
         color: 0x38bdf8,
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.4,
+      }),
+      socketSelected: new THREE.MeshBasicMaterial({
+        color: 0xff3b30,
+        transparent: true,
+        opacity: 0.7,
       }),
       socketDisabled: new THREE.MeshBasicMaterial({
-        color: 0x475569,
+        color: 0x64748b,
         transparent: true,
-        opacity: 0.15,
+        opacity: 0.12,
       }),
     };
   }
@@ -94,7 +102,7 @@ export class StickMesh {
     const stickHeight = 2.4;
 
     // 1. Base Socket Ring on the board
-    const socketGeom = new THREE.RingGeometry(0.18, 0.32, 24);
+    const socketGeom = new THREE.RingGeometry(0.18, 0.34, 24);
     this.socketMesh = new THREE.Mesh(socketGeom, this.materials.socketActive);
     this.socketMesh.position.set(0, -stickHeight / 2 - 0.05, 0.01);
     this.group.add(this.socketMesh);
@@ -111,8 +119,8 @@ export class StickMesh {
     this.stickMesh.receiveShadow = true;
     this.group.add(this.stickMesh);
 
-    // 3. Vibrant match head cap at the top
-    const capGeom = new THREE.SphereGeometry(stickRadius * 1.25, 20, 20);
+    // 3. Candy-red match head cap at the top
+    const capGeom = new THREE.SphereGeometry(stickRadius * 1.3, 20, 20);
     this.topCap = new THREE.Mesh(capGeom, this.materials.matchHead);
     this.topCap.position.y = stickHeight / 2;
     this.topCap.castShadow = true;
@@ -125,9 +133,9 @@ export class StickMesh {
     this.bottomCap.castShadow = true;
     this.group.add(this.bottomCap);
 
-    // 5. Cross Marks (Two intersecting diagonal bars to form a bold '✕' Cross)
-    const crossBarRadius = 0.075;
-    const crossBarLength = 2.6;
+    // 5. Cross Marks (Two chunky intersecting diagonal bars to form a bold '✕' Cross)
+    const crossBarRadius = 0.085;
+    const crossBarLength = 2.65;
     const crossGeom = new THREE.CylinderGeometry(
       crossBarRadius,
       crossBarRadius,
@@ -136,21 +144,21 @@ export class StickMesh {
     );
 
     // Slash 1: Diagonal \ (40 degrees)
-    this.slash1 = new THREE.Mesh(crossGeom, this.materials.strikeSlash);
+    this.slash1 = new THREE.Mesh(crossGeom, this.materials.crossedMark);
     this.slash1.rotation.z = Math.PI / 4.2;
-    this.slash1.position.z = 0.24;
+    this.slash1.position.z = 0.26;
     this.slash1.visible = false;
     this.group.add(this.slash1);
 
     // Slash 2: Diagonal / (-40 degrees, completes the '✕' cross)
     this.slash2 = new THREE.Mesh(crossGeom, this.materials.crossedMark);
     this.slash2.rotation.z = -Math.PI / 4.2;
-    this.slash2.position.z = 0.25;
+    this.slash2.position.z = 0.27;
     this.slash2.visible = false;
     this.group.add(this.slash2);
 
-    // 6. Large invisible touch collider for mobile tapping
-    const hitGeom = new THREE.CylinderGeometry(0.48, 0.48, 3.2, 12);
+    // 6. Extra-large invisible touch collider for small children's fingers
+    const hitGeom = new THREE.CylinderGeometry(0.55, 0.55, 3.4, 12);
     const hitMat = new THREE.MeshBasicMaterial({
       visible: false,
       transparent: true,
@@ -164,81 +172,110 @@ export class StickMesh {
   setHovered(hovered) {
     if (this.isHovered === hovered) return;
     this.isHovered = hovered;
-    if (this.currentState === StickState.ACTIVE) {
+    if (this.currentState === StickState.ACTIVE && !this.isDimmed) {
       const mat = hovered ? this.materials.activeHover : this.materials.active;
       this.stickMesh.material = mat;
       this.bottomCap.material = mat;
     }
   }
 
+  setDimmed(dimmed) {
+    if (this.currentState !== StickState.ACTIVE) return;
+    this.isDimmed = dimmed;
+    const mat = dimmed ? this.materials.dimmedRow : this.materials.active;
+    this.stickMesh.material = mat;
+    this.bottomCap.material = mat;
+    this.socketMesh.material = dimmed ? this.materials.socketDisabled : this.materials.socketActive;
+  }
+
+  // Playful elastic bounce when tapped
+  triggerTapBounce() {
+    this.bounceTimer = 1.0;
+  }
+
   updateVisualState(state, animate = true) {
     this.currentState = state;
 
     if (state === StickState.SELECTED) {
-      // SELECTED: Glowing Crimson, lifted towards user, with active diagonal strike slash
       this.stickMesh.material = this.materials.selected;
       this.topCap.material = this.materials.selected;
       this.bottomCap.material = this.materials.selected;
-      this.socketMesh.material = this.materials.socketActive;
+      this.socketMesh.material = this.materials.socketSelected;
 
+      // Show single diagonal slash while selected
       this.slash1.visible = true;
-      this.slash1.material = this.materials.strikeSlash;
       this.slash2.visible = false;
 
-      this.targetZ = 0.45;
-      this.targetScaleY = 1.08;
-      this.targetRotZ = 0.06;
+      this.targetZ = 0.5;
+      this.targetScaleY = 1.1;
+      this.targetScaleXZ = 1.08;
+      this.targetRotZ = 0.07;
+      this.targetOffsetY = 0.15;
     } else if (state === StickState.DISABLED) {
-      // CROSSED OUT: Soft 20% opacity light grey body WITH A BOLD PERMANENT '✕' CROSS!
+      // CROSSED OUT: Faded grey stick with bold red comic '✕'
       this.stickMesh.material = this.materials.disabled;
       this.topCap.material = this.materials.disabled;
       this.bottomCap.material = this.materials.disabled;
       this.socketMesh.material = this.materials.socketDisabled;
 
-      // Make both slashes visible to form an unmistakable bold red '✕' cross!
       this.slash1.visible = true;
-      this.slash1.material = this.materials.crossedMark;
       this.slash2.visible = true;
-      this.slash2.material = this.materials.crossedMark;
 
       this.targetZ = -0.06;
       this.targetScaleY = 0.94;
+      this.targetScaleXZ = 1.0;
       this.targetRotZ = 0;
+      this.targetOffsetY = 0;
     } else {
-      // ACTIVE / NOT CROSSED: Crisp Dark Charcoal body + Vibrant Red Match Head + Active Socket
-      const bodyMat = this.isHovered ? this.materials.activeHover : this.materials.active;
+      // ACTIVE / NOT CROSSED
+      const bodyMat = this.isDimmed ? this.materials.dimmedRow : (this.isHovered ? this.materials.activeHover : this.materials.active);
       this.stickMesh.material = bodyMat;
-      this.topCap.material = this.materials.matchHead; // Red match head
+      this.topCap.material = this.materials.matchHead; // Bright red candy head
       this.bottomCap.material = bodyMat;
-      this.socketMesh.material = this.materials.socketActive;
+      this.socketMesh.material = this.isDimmed ? this.materials.socketDisabled : this.materials.socketActive;
 
-      // No cross marks on active sticks!
       this.slash1.visible = false;
       this.slash2.visible = false;
 
       this.targetZ = 0;
       this.targetScaleY = 1.0;
+      this.targetScaleXZ = 1.0;
       this.targetRotZ = 0;
+      this.targetOffsetY = 0;
     }
 
     if (!animate) {
       this.group.position.z = this.targetZ;
-      this.group.scale.y = this.targetScaleY;
+      this.group.position.y = this.basePosition.y + this.targetOffsetY;
+      this.group.scale.set(this.targetScaleXZ, this.targetScaleY, this.targetScaleXZ);
       this.group.rotation.z = this.targetRotZ;
     }
   }
 
   update(delta) {
-    const lerpFactor = Math.min(1, delta * 15);
+    const lerpFactor = Math.min(1, delta * 14);
+
+    let currentTargetY = this.basePosition.y + this.targetOffsetY;
+
+    // Springy elastic bounce when tapped
+    if (this.bounceTimer > 0) {
+      this.bounceTimer -= delta * 3.5;
+      const bounceOffset = Math.sin((1.0 - this.bounceTimer) * Math.PI) * 0.35;
+      currentTargetY += Math.max(0, bounceOffset);
+    }
+
     this.group.position.z += (this.targetZ - this.group.position.z) * lerpFactor;
+    this.group.position.y += (currentTargetY - this.group.position.y) * lerpFactor;
     this.group.scale.y += (this.targetScaleY - this.group.scale.y) * lerpFactor;
+    this.group.scale.x += (this.targetScaleXZ - this.group.scale.x) * lerpFactor;
+    this.group.scale.z += (this.targetScaleXZ - this.group.scale.z) * lerpFactor;
     this.group.rotation.z += (this.targetRotZ - this.group.rotation.z) * lerpFactor;
 
-    // Pulsing animation when Selected
+    // Friendly gentle wiggle when Selected
     if (this.currentState === StickState.SELECTED) {
-      const time = performance.now() * 0.005;
-      const pulse = 1 + 0.12 * Math.sin(time * 3);
-      this.slash1.scale.set(pulse, 1 + 0.06 * Math.sin(time * 3), pulse);
+      const time = performance.now() * 0.006;
+      const wobble = 1 + 0.12 * Math.sin(time * 3);
+      this.slash1.scale.set(wobble, 1 + 0.05 * Math.sin(time * 3), wobble);
     }
   }
 }

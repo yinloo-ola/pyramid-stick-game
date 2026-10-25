@@ -6,11 +6,11 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>Pyramid Game (Nim Variant)</title>
+    <title>Pyramid Sticks - 2 Player Game</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;800&family=Outfit:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./src/style.css" />
@@ -22,64 +22,68 @@
         <div class="header-top">
           <div class="brand">
             <span class="brand-icon">🔺</span>
-            <span class="brand-title">PYRAMID</span>
-            <span class="brand-badge">NIM</span>
+            <div class="brand-text">
+              <span class="brand-title">PYRAMID STICKS</span>
+              <span class="brand-goal">🚫 Don't take the last stick!</span>
+            </div>
           </div>
 
           <div class="header-controls">
-            <button id="btn-rules" class="icon-button" aria-label="Game Rules" title="Game Rules">
+            <button id="btn-rules" class="icon-button" aria-label="How to Play" title="How to Play">
               <span>❓</span>
             </button>
             <button id="btn-mute" class="icon-button" aria-label="Toggle Sound" title="Toggle Sound">
               <span>🔊</span>
             </button>
-            <button id="btn-reset" class="secondary-button" title="Reset Current Match">
+            <button id="btn-reset" class="secondary-button" title="Start a New Game">
               <span class="btn-icon">↺</span>
-              <span class="btn-text">Reset Game</span>
+              <span class="btn-text">New Game</span>
             </button>
           </div>
         </div>
 
-        <!-- 2-PLAYER PASS & PLAY BANNER -->
+        <!-- 2-PLAYER PASS & PLAY ANIMAL CARDS -->
         <div class="players-bar">
           <div id="p1-card" class="player-card p1 active-turn">
-            <div class="player-indicator"></div>
+            <div class="player-avatar">🦊</div>
             <div class="player-info">
               <span class="player-name">Player 1</span>
-              <span class="player-tag">Turn Indicator</span>
+              <span class="player-tag">🦊 Fox Team</span>
             </div>
+            <div class="turn-bubble">YOUR TURN!</div>
           </div>
           <div class="vs-divider">VS</div>
           <div id="p2-card" class="player-card p2">
-            <div class="player-indicator"></div>
+            <div class="player-avatar">🐼</div>
             <div class="player-info">
               <span class="player-name">Player 2</span>
-              <span class="player-tag">Turn Indicator</span>
+              <span class="player-tag">🐼 Panda Team</span>
             </div>
+            <div class="turn-bubble">YOUR TURN!</div>
           </div>
         </div>
 
         <!-- CURRENT STATUS BANNER -->
         <div class="banner-container">
           <div id="status-banner" class="status-banner p1-turn">
-            PLAYER 1'S TURN
+            🦊 PLAYER 1'S TURN
           </div>
           <div id="status-subtext" class="status-subtext">
-            Tap 1 to 3 sticks in a single row
+            👆 Tap 1, 2, or 3 sticks in ONE row
           </div>
         </div>
 
         <!-- ROW STICK TRACKER & VISUAL LEGEND -->
         <div class="board-tracker">
           <div class="row-chips" id="row-chips">
-            <span class="row-chip" id="chip-r1">R1: <b>1</b></span>
-            <span class="row-chip" id="chip-r2">R2: <b>3</b></span>
-            <span class="row-chip" id="chip-r3">R3: <b>5</b></span>
-            <span class="row-chip" id="chip-r4">R4: <b>7</b></span>
+            <span class="row-chip" id="chip-r1">Row 1: <b>1</b></span>
+            <span class="row-chip" id="chip-r2">Row 2: <b>3</b></span>
+            <span class="row-chip" id="chip-r3">Row 3: <b>5</b></span>
+            <span class="row-chip" id="chip-r4">Row 4: <b>7</b></span>
           </div>
           <div class="legend-strip">
-            <span class="legend-item"><span class="legend-dot active"></span>Active</span>
-            <span class="legend-item"><span class="legend-dot selected"></span>Selected</span>
+            <span class="legend-item"><span class="legend-dot active"></span>Standing</span>
+            <span class="legend-item"><span class="legend-dot selected"></span>Chosen</span>
             <span class="legend-item"><span class="legend-dot crossed">✕</span>Crossed</span>
           </div>
         </div>
@@ -94,71 +98,64 @@
       <!-- FOOTER ACTION BAR -->
       <footer class="game-footer">
         <div class="footer-actions">
-          <button id="btn-clear" class="btn-clear" aria-label="Clear selected sticks">
-            ✕ Clear
+          <button id="btn-clear" class="btn-clear" aria-label="Undo selection">
+            ↩ Undo
           </button>
           <button id="btn-confirm" class="btn-confirm disabled" disabled>
-            CONFIRM MOVE
+            👆 Pick 1 to 3 sticks
           </button>
         </div>
       </footer>
 
-      <!-- GAME OVER MODAL -->
+      <!-- GAME OVER CELEBRATION MODAL -->
       <div id="game-over-modal" class="modal-backdrop">
         <div class="modal-card winner-card">
           <div class="modal-trophy">🏆</div>
-          <h2 id="winner-title" class="winner-title">Player 1 Wins!</h2>
+          <h2 id="winner-title" class="winner-title">🎉 Player 1 Wins!</h2>
           <p id="winner-subtitle" class="winner-subtitle">
-            Player 2 is left with the final stick.
+            Player 2 is left with the final stick! 🪤
           </p>
           <div class="modal-rules-reminder">
-            Misère Nim Rule: The player forced to take the final stick loses!
+            ⭐ Remember: The player left with the very last stick loses!
           </div>
           <button id="btn-play-again" class="btn-primary">
-            Play Again
+            🔄 Play Again!
           </button>
         </div>
       </div>
 
-      <!-- RULES MODAL -->
+      <!-- KID-FRIENDLY RULES MODAL -->
       <div id="rules-modal" class="modal-backdrop">
         <div class="modal-card rules-card">
           <div class="modal-header">
-            <h3>How to Play (Misère Nim)</h3>
-            <button id="btn-close-rules" class="modal-close" aria-label="Close modal">✕</button>
+            <h3>🎮 How to Play</h3>
+            <button id="btn-close-rules" class="modal-close" aria-label="Close rules">✕</button>
           </div>
           <div class="rules-body">
             <div class="rule-item">
-              <span class="rule-num">1</span>
+              <span class="rule-icon-badge">1️⃣</span>
               <div>
-                <strong>Pyramid Setup:</strong>
-                <p>16 sticks arranged in 4 rows (1, 3, 5, 7).</p>
+                <strong>Pick your sticks:</strong>
+                <p>On your turn, tap <strong>1, 2, or 3 sticks</strong> in the <em>same row</em>.</p>
               </div>
             </div>
             <div class="rule-item">
-              <span class="rule-num">2</span>
+              <span class="rule-icon-badge">2️⃣</span>
               <div>
-                <strong>Your Turn:</strong>
-                <p>Cross out <strong>1, 2, or 3 sticks</strong>. All chosen sticks on a turn <em>must be from the same horizontal row</em>.</p>
+                <strong>Cross them out:</strong>
+                <p>Hit the big <strong>✅ Cross Out</strong> button, then pass the phone to your friend!</p>
               </div>
             </div>
             <div class="rule-item">
-              <span class="rule-num">3</span>
+              <span class="rule-icon-badge">⭐</span>
               <div>
-                <strong>Misère Winning Rule:</strong>
-                <p>The player left forced to take the <strong>very last stick</strong> loses the game! Leave your opponent with only 1 stick to claim victory.</p>
-              </div>
-            </div>
-            <div class="rule-item">
-              <span class="rule-num">4</span>
-              <div>
-                <strong>Single Device:</strong>
-                <p>Play with a friend by passing the phone between turns.</p>
+                <strong>The Golden Rule:</strong>
+                <p><strong>🚫 DON'T take the last stick!</strong> Trap your friend with the final stick to win!</p>
               </div>
             </div>
           </div>
-          <button class="btn-secondary" onclick="document.getElementById('rules-modal').classList.remove('visible')">
-            Got it, Let's Play!
+          <button class="btn-primary" onclick="document.getElementById('rules-modal').classList.remove('visible')">
+            🚀 Got It, Let's Play!
           </button>
         </div>
       </div>
