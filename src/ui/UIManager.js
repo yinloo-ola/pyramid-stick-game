@@ -2,7 +2,7 @@ import { Player, GameStatus } from '../state/types.js';
 
 export class UIManager {
   constructor(handlers) {
-    this.handlers = handlers; // { onConfirm, onReset, onToggleMute, onClearSelection, onSaveNames }
+    this.handlers = handlers; // { onConfirm, onReset, onToggleMute, onClearSelection, onSaveNames, onOpenMultiplayer, onJoinMultiplayer, onLeaveMultiplayer }
     this.statusBanner = document.getElementById('status-banner');
     this.statusSubtext = document.getElementById('status-subtext');
     this.player1Card = document.getElementById('p1-card');
@@ -18,7 +18,29 @@ export class UIManager {
     this.btnMute = document.getElementById('btn-mute');
     this.btnRules = document.getElementById('btn-rules');
     this.btnNames = document.getElementById('btn-names');
+    this.btnMode = document.getElementById('btn-mode');
+    this.modeBtnText = document.getElementById('mode-btn-text');
 
+    // Online Badge
+    this.onlineBadge = document.getElementById('online-badge');
+    this.onlineBadgeText = document.getElementById('online-badge-text');
+    this.btnLeaveOnline = document.getElementById('btn-leave-online');
+
+    // Multiplayer Modal
+    this.multiplayerModal = document.getElementById('multiplayer-modal');
+    this.btnCloseMultiplayer = document.getElementById('btn-close-multiplayer');
+    this.mpTabHost = document.getElementById('mp-tab-host');
+    this.mpTabJoin = document.getElementById('mp-tab-join');
+    this.mpPanelHost = document.getElementById('mp-panel-host');
+    this.mpPanelJoin = document.getElementById('mp-panel-join');
+    this.hostRoomCode = document.getElementById('host-room-code');
+    this.qrCodeImg = document.getElementById('qr-code-img');
+    this.btnCopyLink = document.getElementById('btn-copy-link');
+    this.hostWaitingStatus = document.getElementById('host-waiting-status');
+    this.joinForm = document.getElementById('join-form');
+    this.inputJoinCode = document.getElementById('input-join-code');
+
+    // Other Modals
     this.rulesModal = document.getElementById('rules-modal');
     this.btnCloseRules = document.getElementById('btn-close-rules');
     this.namesModal = document.getElementById('names-modal');
@@ -36,10 +58,12 @@ export class UIManager {
 
     this.selectedP1Avatar = '🦊';
     this.selectedP2Avatar = '🐼';
+    this.currentShareUrl = '';
     this.latestSnapshot = null;
 
     this.bindEvents();
     this.setupAvatarPickers();
+    this.setupMultiplayerTabs();
   }
 
   setupAvatarPickers() {
@@ -58,6 +82,66 @@ export class UIManager {
       btn.classList.add('selected');
       this.selectedP2Avatar = btn.dataset.avatar;
     });
+  }
+
+  setupMultiplayerTabs() {
+    this.mpTabHost.addEventListener('click', () => {
+      this.mpTabHost.classList.add('active');
+      this.mpTabJoin.classList.remove('active');
+      this.mpPanelHost.classList.add('active');
+      this.mpPanelJoin.classList.remove('active');
+    });
+
+    this.mpTabJoin.addEventListener('click', () => {
+      this.mpTabJoin.classList.add('active');
+      this.mpTabHost.classList.remove('active');
+      this.mpPanelJoin.classList.add('active');
+      this.mpPanelHost.classList.remove('active');
+      setTimeout(() => this.inputJoinCode.focus(), 100);
+    });
+  }
+
+  async openMultiplayerModal() {
+    this.multiplayerModal.classList.add('visible');
+    // Default to host tab and trigger creation
+    this.mpTabHost.click();
+    this.hostRoomCode.textContent = '----';
+    this.hostWaitingStatus.innerHTML = '<span class="spinner-dot"></span> Generating room code...';
+
+    if (this.handlers.onOpenMultiplayer) {
+      try {
+        const info = await this.handlers.onOpenMultiplayer();
+        if (info) {
+          this.hostRoomCode.textContent = info.code;
+          this.qrCodeImg.src = info.qrDataUrl;
+          this.currentShareUrl = info.shareUrl;
+          this.hostWaitingStatus.innerHTML = '<span class="spinner-dot"></span> Waiting for friend to connect...';
+        }
+      } catch (err) {
+        this.hostWaitingStatus.textContent = 'Failed to generate room. Try again.';
+      }
+    }
+  }
+
+  closeMultiplayerModal() {
+    this.multiplayerModal.classList.remove('visible');
+  }
+
+  notifyPeerConnected(myRole, roomCode) {
+    this.closeMultiplayerModal();
+    const roleText = myRole === Player.PLAYER_1 ? '🦊 You are Player 1' : '🐼 You are Player 2';
+    this.onlineBadgeText.textContent = `Room ${roomCode} • ${roleText}`;
+    this.onlineBadge.classList.remove('hidden');
+    this.modeBtnText.textContent = 'Connected 🟢';
+  }
+
+  notifyPeerDisconnected() {
+    this.onlineBadge.classList.add('hidden');
+    this.modeBtnText.textContent = '2 Phones';
+  }
+
+  notifyPeerError(err) {
+    this.hostWaitingStatus.textContent = 'Connection error. Check code and try again.';
   }
 
   openNamesModal() {
@@ -115,7 +199,45 @@ export class UIManager {
       }
     });
 
-    // Open Names Modal from edit button or tapping player cards
+    // Multiplayer Buttons
+    this.btnMode.addEventListener('click', () => {
+      this.openMultiplayerModal();
+    });
+
+    this.btnCloseMultiplayer.addEventListener('click', () => {
+      this.closeMultiplayerModal();
+    });
+
+    this.multiplayerModal.addEventListener('click', (e) => {
+      if (e.target === this.multiplayerModal) {
+        this.closeMultiplayerModal();
+      }
+    });
+
+    this.btnCopyLink.addEventListener('click', () => {
+      if (this.currentShareUrl && navigator.clipboard) {
+        navigator.clipboard.writeText(this.currentShareUrl).then(() => {
+          this.btnCopyLink.textContent = '✅ Copied!';
+          setTimeout(() => {
+            this.btnCopyLink.textContent = '📋 Copy Invite Link';
+          }, 2000);
+        });
+      }
+    });
+
+    this.joinForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const code = this.inputJoinCode.value.trim();
+      if (code) {
+        this.handlers.onJoinMultiplayer?.(code);
+      }
+    });
+
+    this.btnLeaveOnline.addEventListener('click', () => {
+      this.handlers.onLeaveMultiplayer?.();
+    });
+
+    // Open Names Modal
     this.btnNames.addEventListener('click', () => this.openNamesModal());
     this.player1Card.addEventListener('click', () => this.openNamesModal());
     this.player2Card.addEventListener('click', () => this.openNamesModal());
@@ -146,7 +268,7 @@ export class UIManager {
     this.btnMute.setAttribute('aria-label', isMuted ? 'Unmute Sound' : 'Mute Sound');
   }
 
-  render(snapshot) {
+  render(snapshot, context = {}) {
     this.latestSnapshot = snapshot;
     const {
       current_turn,
@@ -159,6 +281,10 @@ export class UIManager {
       player_names,
       player_avatars,
     } = snapshot;
+
+    const { gameMode = 'LOCAL', myPlayerRole = null } = context;
+    const isOnline = gameMode === 'ONLINE';
+    const isMyTurn = !isOnline || (myPlayerRole && current_turn === myPlayerRole);
 
     const p1Name = (player_names && player_names[Player.PLAYER_1]) || 'Player 1';
     const p2Name = (player_names && player_names[Player.PLAYER_2]) || 'Player 2';
@@ -193,24 +319,42 @@ export class UIManager {
       this.gameOverModal.classList.remove('visible');
       const activeAvatar = isP1 ? p1Avatar : p2Avatar;
       const activeName = isP1 ? p1Name : p2Name;
-      this.statusBanner.textContent = `${activeAvatar} ${activeName.toUpperCase()}'S TURN`;
-      this.statusBanner.className = `status-banner ${isP1 ? 'p1-turn' : 'p2-turn'}`;
 
-      if (selected_sticks.length === 0) {
-        this.statusSubtext.textContent = `👆 ${activeName}, tap 1, 2, or 3 sticks in ONE row`;
-      } else {
-        const count = selected_sticks.length;
-        if (count === 1) {
-          this.statusSubtext.textContent = '1 stick picked! Ready to cross or pick more';
-        } else if (count === 2) {
-          this.statusSubtext.textContent = '2 sticks picked! Ready to cross or pick 1 more';
+      if (isOnline) {
+        if (isMyTurn) {
+          this.statusBanner.textContent = `✨ YOUR TURN!`;
+          this.statusBanner.className = `status-banner ${isP1 ? 'p1-turn' : 'p2-turn'}`;
+          this.statusSubtext.textContent = `Tap 1 to 3 sticks in ONE row!`;
         } else {
-          this.statusSubtext.textContent = '3 sticks picked (Max!) • Tap button to cross!';
+          this.statusBanner.textContent = `⏳ WAITING FOR ${activeName.toUpperCase()}...`;
+          this.statusBanner.className = `status-banner ${isP1 ? 'p1-turn' : 'p2-turn'}`;
+          this.statusSubtext.textContent = `${activeAvatar} ${activeName} is picking sticks on their phone`;
+        }
+      } else {
+        this.statusBanner.textContent = `${activeAvatar} ${activeName.toUpperCase()}'S TURN`;
+        this.statusBanner.className = `status-banner ${isP1 ? 'p1-turn' : 'p2-turn'}`;
+
+        if (selected_sticks.length === 0) {
+          this.statusSubtext.textContent = `👆 ${activeName}, tap 1, 2, or 3 sticks in ONE row`;
+        } else {
+          const count = selected_sticks.length;
+          if (count === 1) {
+            this.statusSubtext.textContent = '1 stick picked! Ready to cross or pick more';
+          } else if (count === 2) {
+            this.statusSubtext.textContent = '2 sticks picked! Ready to cross or pick 1 more';
+          } else {
+            this.statusSubtext.textContent = '3 sticks picked (Max!) • Tap button to cross!';
+          }
         }
       }
 
       // Kid-friendly dynamic Confirm Button
-      if (selected_sticks.length > 0) {
+      if (isOnline && !isMyTurn) {
+        this.btnConfirm.disabled = true;
+        this.btnConfirm.classList.add('disabled');
+        this.btnConfirm.innerHTML = `⏳ Waiting for ${activeName}...`;
+        this.btnClear.classList.remove('visible');
+      } else if (selected_sticks.length > 0) {
         this.btnConfirm.disabled = false;
         this.btnConfirm.classList.remove('disabled');
         const count = selected_sticks.length;
@@ -228,8 +372,14 @@ export class UIManager {
       const winnerAvatar = (player_avatars && player_avatars[winner]) || (winner === Player.PLAYER_1 ? '🦊' : '🐼');
       const loserAvatar = (player_avatars && player_avatars[loser]) || (loser === Player.PLAYER_1 ? '🦊' : '🐼');
 
-      // AC 3.1: "Player [X] Wins! Player [Y] is left with the final stick."
-      this.statusBanner.textContent = `${winnerAvatar} ${winnerName.toUpperCase()} WINS!`;
+      const isMeWinner = isOnline && myPlayerRole === winner;
+
+      if (isOnline) {
+        this.statusBanner.textContent = isMeWinner ? `🏆 YOU WON!` : `🏆 ${winnerName.toUpperCase()} WINS!`;
+      } else {
+        this.statusBanner.textContent = `${winnerAvatar} ${winnerName.toUpperCase()} WINS!`;
+      }
+
       this.statusBanner.className = `status-banner winner-announced`;
       this.statusSubtext.textContent = `${loserName} is left with the final stick.`;
 
@@ -240,7 +390,9 @@ export class UIManager {
       this.btnClear.classList.remove('visible');
 
       // Show Kid-Friendly Game Over Modal
-      this.winnerTitle.textContent = `🎉 ${winnerAvatar} ${winnerName} Wins!`;
+      this.winnerTitle.textContent = isOnline && isMeWinner
+        ? `🎉 You Won!`
+        : `🎉 ${winnerAvatar} ${winnerName} Wins!`;
       this.winnerSubtitle.textContent = `Uh-oh! ${loserAvatar} ${loserName} is left with the final stick! 🪤`;
       this.gameOverModal.classList.add('visible');
     }

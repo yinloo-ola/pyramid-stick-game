@@ -22,6 +22,9 @@ window.addEventListener('DOMContentLoaded', () => {
     onClearSelection: () => controller?.handleClearSelection(),
     onSaveNames: (p1Name, p1Avatar, p2Name, p2Avatar) =>
       controller?.handleSaveNames(p1Name, p1Avatar, p2Name, p2Avatar),
+    onOpenMultiplayer: () => controller?.handleCreateRoom(),
+    onJoinMultiplayer: (code) => controller?.handleJoinRoom(code),
+    onLeaveMultiplayer: () => controller?.disconnectMultiplayer(),
   });
 
   const scene = new ThreeScene(canvasContainer, (stickId) => {

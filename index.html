@@ -29,6 +29,10 @@
           </div>
 
           <div class="header-controls">
+            <button id="btn-mode" class="secondary-button mode-button" title="Play on 2 Phones">
+              <span class="btn-icon">🌐</span>
+              <span id="mode-btn-text" class="btn-text">2 Phones</span>
+            </button>
             <button id="btn-names" class="icon-button" aria-label="Enter Player Names" title="Enter Player Names">
               <span>✏️</span>
             </button>
@@ -43,6 +47,13 @@
               <span class="btn-text">New Game</span>
             </button>
           </div>
+        </div>
+
+        <!-- ONLINE STATUS BADGE -->
+        <div id="online-badge" class="online-badge hidden">
+          <span class="online-indicator-dot"></span>
+          <span id="online-badge-text">2-Phone Mode • 🦊 You are Player 1</span>
+          <button id="btn-leave-online" class="btn-leave-online" title="Leave Online Mode">✕ Leave</button>
         </div>
 
         <!-- 2-PLAYER PASS & PLAY ANIMAL CARDS (Clickable to change name) -->
@@ -109,6 +120,68 @@
           </button>
         </div>
       </footer>
+
+      <!-- 2-DEVICE MULTIPLAYER MODAL (WebRTC P2P) -->
+      <div id="multiplayer-modal" class="modal-backdrop">
+        <div class="modal-card multiplayer-card">
+          <div class="modal-header">
+            <h3>🌐 Play on 2 Devices</h3>
+            <button id="btn-close-multiplayer" class="modal-close" aria-label="Close">✕</button>
+          </div>
+
+          <div class="mp-tabs">
+            <button id="mp-tab-host" class="mp-tab active" type="button">🦊 Create Room</button>
+            <button id="mp-tab-join" class="mp-tab" type="button">🐼 Join Room</button>
+          </div>
+
+          <!-- HOST PANEL -->
+          <div id="mp-panel-host" class="mp-panel active">
+            <div class="mp-instructions">
+              Share this 4-digit code or let your friend scan the QR code:
+            </div>
+            <div class="code-box">
+              <span class="code-label">ROOM CODE:</span>
+              <div id="host-room-code" class="big-room-code">----</div>
+            </div>
+            <div class="qr-container">
+              <img id="qr-code-img" class="qr-code-img" alt="QR Code to join game" />
+              <div class="qr-hint">📱 Point friend's camera here to join!</div>
+            </div>
+            <div class="mp-actions">
+              <button id="btn-copy-link" class="btn-secondary" type="button">
+                📋 Copy Invite Link
+              </button>
+            </div>
+            <div id="host-waiting-status" class="waiting-pill">
+              <span class="spinner-dot"></span> Waiting for friend to connect...
+            </div>
+          </div>
+
+          <!-- JOIN PANEL -->
+          <div id="mp-panel-join" class="mp-panel">
+            <div class="mp-instructions">
+              Enter the 4-digit room code shown on your friend's phone:
+            </div>
+            <form id="join-form" class="join-form">
+              <input
+                type="number"
+                id="input-join-code"
+                class="kid-input code-input"
+                placeholder="e.g. 4821"
+                min="1000"
+                max="9999"
+                autocomplete="off"
+              />
+              <button id="btn-join-submit" type="submit" class="btn-primary">
+                🚀 Connect to Friend!
+              </button>
+            </form>
+            <div class="join-camera-tip">
+              💡 <strong>Tip:</strong> You can also just open your phone camera and scan the QR code on your friend's screen!
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- PLAYER NAMES & AVATARS MODAL -->
       <div id="names-modal" class="modal-backdrop">
@@ -205,7 +278,7 @@
               <span class="rule-icon-badge">2️⃣</span>
               <div>
                 <strong>Cross them out:</strong>
-                <p>Hit the big <strong>✅ Cross Out</strong> button, then pass the phone to your friend!</p>
+                <p>Hit the big <strong>✅ Cross Out</strong> button, then it's your friend's turn!</p>
               </div>
             </div>
             <div class="rule-item">
@@ -213,6 +286,13 @@
               <div>
                 <strong>The Golden Rule:</strong>
                 <p><strong>🚫 DON'T take the last stick!</strong> Trap your friend with the final stick to win!</p>
+              </div>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon-badge">🌐</span>
+              <div>
+                <strong>Play on 2 Phones:</strong>
+                <p>Tap <strong>"2 Phones"</strong> above to play across devices with zero backend!</p>
               </div>
             </div>
           </div>
