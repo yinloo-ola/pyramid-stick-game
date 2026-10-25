@@ -94,6 +94,10 @@ export class GameController {
           this.audio.playWin();
           this.scene.triggerVictoryEffects();
         }, 300);
+      } else {
+        const nextPlayerName = this.state.player_names[res.nextTurn] || 'Next Player';
+        const nextPlayerAvatar = this.state.player_avatars[res.nextTurn] || '👉';
+        this.toast.show(`👉 Pass the phone to ${nextPlayerAvatar} ${nextPlayerName}!`, 'info', 1800);
       }
     } finally {
       // Throttle confirm submissions to prevent accidental double-clicks (350ms)
@@ -103,11 +107,20 @@ export class GameController {
     }
   }
 
+  handleSaveNames(p1Name, p1Avatar, p2Name, p2Avatar) {
+    this.state.setPlayerInfo('PLAYER_1', p1Name, p1Avatar);
+    this.state.setPlayerInfo('PLAYER_2', p2Name, p2Avatar);
+    this.audio.playTap(0);
+    this.toast.show(`Hi ${p1Avatar} ${p1Name} & ${p2Avatar} ${p2Name}! Let's play! 🎮`, 'info', 2200);
+  }
+
   handleResetGame() {
     this.audio.playReset();
     this.state.reset();
     this.scene.buildSticks(this.state.sticks);
-    this.toast.show('🔄 New Game! 🦊 Player 1 starts!', 'info', 1800);
+    const p1Name = this.state.player_names['PLAYER_1'] || 'Player 1';
+    const p1Avatar = this.state.player_avatars['PLAYER_1'] || '🦊';
+    this.toast.show(`🔄 New Game! ${p1Avatar} ${p1Name} starts!`, 'info', 1800);
   }
 
   handleToggleMute() {

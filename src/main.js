@@ -20,6 +20,8 @@ window.addEventListener('DOMContentLoaded', () => {
     onReset: () => controller?.handleResetGame(),
     onToggleMute: () => controller?.handleToggleMute(),
     onClearSelection: () => controller?.handleClearSelection(),
+    onSaveNames: (p1Name, p1Avatar, p2Name, p2Avatar) =>
+      controller?.handleSaveNames(p1Name, p1Avatar, p2Name, p2Avatar),
   });
 
   const scene = new ThreeScene(canvasContainer, (stickId) => {

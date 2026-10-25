@@ -189,3 +189,21 @@ test('Reset Game restores full initial state', () => {
   assert.equal(state.game_status, GameStatus.PLAYING);
   assert.equal(state.sticks.every((s) => s.state === StickState.ACTIVE), true);
 });
+
+test('Custom Player Names and Avatars update snapshot and persist across resets', () => {
+  const state = new GameState();
+  state.setPlayerInfo(Player.PLAYER_1, 'Leo', '🦁');
+  state.setPlayerInfo(Player.PLAYER_2, 'Emma', '🦄');
+
+  let snap = state.getSnapshot();
+  assert.equal(snap.player_names[Player.PLAYER_1], 'Leo');
+  assert.equal(snap.player_names[Player.PLAYER_2], 'Emma');
+  assert.equal(snap.player_avatars[Player.PLAYER_1], '🦁');
+  assert.equal(snap.player_avatars[Player.PLAYER_2], '🦄');
+
+  // Verify reset preserves custom names
+  state.reset();
+  snap = state.getSnapshot();
+  assert.equal(snap.player_names[Player.PLAYER_1], 'Leo');
+  assert.equal(snap.player_names[Player.PLAYER_2], 'Emma');
+});

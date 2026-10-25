@@ -3,7 +3,32 @@ import { Player, GameStatus, StickState, INITIAL_BOARD } from './types.js';
 export class GameState {
   constructor() {
     this.listeners = new Set();
+    const isBrowser = typeof localStorage !== 'undefined';
+    this.player_names = {
+      [Player.PLAYER_1]: (isBrowser && localStorage.getItem('pyramid_player_1_name')) || 'Player 1',
+      [Player.PLAYER_2]: (isBrowser && localStorage.getItem('pyramid_player_2_name')) || 'Player 2',
+    };
+    this.player_avatars = {
+      [Player.PLAYER_1]: (isBrowser && localStorage.getItem('pyramid_player_1_avatar')) || '🦊',
+      [Player.PLAYER_2]: (isBrowser && localStorage.getItem('pyramid_player_2_avatar')) || '🐼',
+    };
     this.reset();
+  }
+
+  setPlayerInfo(player, name, avatar) {
+    if (name && name.trim()) {
+      this.player_names[player] = name.trim().slice(0, 14);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`pyramid_${player.toLowerCase()}_name`, this.player_names[player]);
+      }
+    }
+    if (avatar) {
+      this.player_avatars[player] = avatar;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`pyramid_${player.toLowerCase()}_avatar`, avatar);
+      }
+    }
+    this.notify();
   }
 
   reset() {
@@ -15,7 +40,7 @@ export class GameState {
     this.selected_sticks = [];
     this.selected_row = null;
 
-    // Build the 15 sticks
+    // Build the 16 sticks (1 + 3 + 5 + 7)
     this.sticks = [];
     let stickId = 0;
     for (let row = 0; row < INITIAL_BOARD.length; row++) {
@@ -226,6 +251,8 @@ export class GameState {
       selected_row: this.selected_row,
       sticks: this.sticks.map((s) => ({ ...s })),
       totalActive: this.getTotalActiveSticks(),
+      player_names: { ...this.player_names },
+      player_avatars: { ...this.player_avatars },
     };
   }
 }
