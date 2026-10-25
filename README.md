@@ -2,6 +2,8 @@
 
 A tactile 2-player turn-based strategy game built with **Three.js** and vanilla ES modules. Designed specifically for pass-and-play on a single mobile phone or desktop browser with zero backend or login required.
 
+🎮 **[Play Live on GitHub Pages](https://yinloo-ola.github.io/pyramid-stick-game/)**
+
 ---
 
 ## 🎮 Game Rules (Misère Nim)
