@@ -66,12 +66,25 @@ export class UIManager {
   }
 
   render(snapshot) {
-    const { current_turn, game_status, winner, loser, selected_sticks } = snapshot;
+    const { current_turn, game_status, winner, loser, selected_sticks, board_state, selected_row } = snapshot;
 
     // 1. Update Player Badges
     const isP1 = current_turn === Player.PLAYER_1;
     this.player1Card.classList.toggle('active-turn', isP1 && game_status === GameStatus.PLAYING);
     this.player2Card.classList.toggle('active-turn', !isP1 && game_status === GameStatus.PLAYING);
+
+    // 2. Update Row Tracker Chips
+    if (board_state) {
+      for (let r = 0; r < 4; r++) {
+        const chip = document.getElementById(`chip-r${r + 1}`);
+        if (chip) {
+          const remaining = board_state[r];
+          chip.innerHTML = `R${r + 1}: <b>${remaining}</b>`;
+          chip.classList.toggle('empty', remaining === 0);
+          chip.classList.toggle('selected-row', selected_row === r);
+        }
+      }
+    }
 
     // 2. Update Status Banner
     if (game_status === GameStatus.PLAYING) {

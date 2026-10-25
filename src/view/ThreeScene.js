@@ -43,13 +43,13 @@ export class ThreeScene {
   }
 
   createLights() {
-    // Warm, ambient general light
-    const ambientLight = new THREE.AmbientLight(0xfdfbf7, 1.4);
+    // Warm ambient light
+    const ambientLight = new THREE.AmbientLight(0xf8fafc, 1.2);
     this.scene.add(ambientLight);
 
-    // Key directional light with soft shadows
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
-    keyLight.position.set(5, 9, 12);
+    // Front-top Key directional light for clear shadows and specular definition
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    keyLight.position.set(4, 10, 10);
     keyLight.castShadow = true;
     keyLight.shadow.mapSize.width = 1024;
     keyLight.shadow.mapSize.height = 1024;
@@ -62,37 +62,63 @@ export class ThreeScene {
     keyLight.shadow.bias = -0.0005;
     this.scene.add(keyLight);
 
-    // Gentle fill light
-    const fillLight = new THREE.DirectionalLight(0xa5c4e8, 0.8);
-    fillLight.position.set(-6, -7, 6);
+    // Fill light from lower angle
+    const fillLight = new THREE.DirectionalLight(0x7dd3fc, 0.9);
+    fillLight.position.set(-6, -6, 8);
     this.scene.add(fillLight);
+
+    // Top-back Rim Light to create crisp outlines around charcoal sticks
+    const rimLight = new THREE.DirectionalLight(0xe0f2fe, 1.6);
+    rimLight.position.set(0, 6, -4);
+    this.scene.add(rimLight);
   }
 
   createBackdrop() {
-    // Stylized subtle game mat / board surface
-    const boardGeom = new THREE.PlaneGeometry(13.5, 14.5);
+    // Elegant game mat surface with high contrast
+    const boardGeom = new THREE.PlaneGeometry(13.5, 14.8);
     const boardMat = new THREE.MeshStandardMaterial({
-      color: 0x1b2838,
-      roughness: 0.85,
-      metalness: 0.1,
+      color: 0x141e2c, // Rich dark navy backdrop
+      roughness: 0.8,
+      metalness: 0.15,
     });
     const board = new THREE.Mesh(boardGeom, boardMat);
     board.position.set(0, 0, -0.6);
     board.receiveShadow = true;
     this.scene.add(board);
 
-    // Subtle decorative border frame
-    const frameGeom = new THREE.RingGeometry(6.6, 6.75, 4);
-    const frameMat = new THREE.MeshBasicMaterial({
-      color: 0x2e4258,
-      transparent: true,
-      opacity: 0.4,
-      side: THREE.DoubleSide,
-    });
-    const frame = new THREE.Mesh(frameGeom, frameMat);
-    frame.rotation.z = Math.PI / 4;
-    frame.position.set(0, 0, -0.58);
-    this.scene.add(frame);
+    // Subtle horizontal lane trays for each row (Row 1 to Row 4)
+    const rowSpacingY = 3.1;
+    const startY = 4.65;
+    const trayWidths = [3.2, 6.0, 9.0, 11.8];
+
+    for (let r = 0; r < 4; r++) {
+      const y = startY - r * rowSpacingY;
+      const trayGeom = new THREE.PlaneGeometry(trayWidths[r], 2.85);
+      const trayMat = new THREE.MeshStandardMaterial({
+        color: 0x1a2638,
+        roughness: 0.85,
+        metalness: 0.1,
+      });
+      const tray = new THREE.Mesh(trayGeom, trayMat);
+      tray.position.set(0, y, -0.58);
+      tray.receiveShadow = true;
+      this.scene.add(tray);
+
+      // Delicate lane border
+      const edgeGeom = new THREE.PlaneGeometry(trayWidths[r], 0.05);
+      const edgeMat = new THREE.MeshBasicMaterial({
+        color: 0x2e4460,
+        transparent: true,
+        opacity: 0.5,
+      });
+      const topEdge = new THREE.Mesh(edgeGeom, edgeMat);
+      topEdge.position.set(0, y + 1.42, -0.57);
+      this.scene.add(topEdge);
+
+      const bottomEdge = new THREE.Mesh(edgeGeom, edgeMat);
+      bottomEdge.position.set(0, y - 1.42, -0.57);
+      this.scene.add(bottomEdge);
+    }
   }
 
   buildSticks(sticksData) {
@@ -192,7 +218,6 @@ export class ThreeScene {
     const dom = this.renderer.domElement;
 
     const handlePointerDown = (e) => {
-      // Prevent phantom touch/mouse events
       const stickId = this.getIntersectedStick(e);
       if (stickId !== null && this.onStickClick) {
         this.onStickClick(stickId);
